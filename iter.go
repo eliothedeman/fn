@@ -1,6 +1,8 @@
 package fn
 
-import "constraints"
+import (
+	"constraints"
+)
 
 type Option[T any] struct {
 	val    T
@@ -78,6 +80,40 @@ func Range[T constraints.Integer](start, end T) *Iter[T] {
 	}
 }
 
+func NewIter[T any](f func() Option[T]) *Iter[T] {
+	i := new(Iter[T])
+	i.next = f
+	return i
+}
+
+func IterSlice[T any](s []T) *Iter[T] {
+	i := 0
+	return NewIter(func() (out Option[T]) {
+		if i >= len(s) {
+			return None[T]()
+		}
+		out = Some(s[i])
+		i++
+		return
+	})
+}
+
+func Chain[T any](iters ...*Iter[T]) *Iter[T] {
+	i := 0
+	return NewIter(func() (out Option[T]) {
+		for {
+			if i >= len(iters) {
+				return None[T]()
+			}
+			out = iters[i].next()
+			if out.hasVal {
+				return
+			}
+			i++
+		}
+	})
+}
+
 func Map[T, K any](in *Iter[T], f func(T) K) *Iter[K] {
 	i := new(Iter[K])
 	i.next = func() Option[K] {
@@ -105,4 +141,19 @@ func Filter[T any](in *Iter[T], pred func(T) bool) *Iter[T] {
 		}
 	}
 	return i
+}
+
+func Reduce[T any](in *Iter[T], seed T, f func(a, b T) T) T {
+	out := seed
+	for in.Next() {
+		out = f(out, in.Val())
+	}
+	return out
+}
+
+func Sum[T constraints.Integer | constraints.Float](in *Iter[T]) T {
+	var zero T
+	return Reduce(in, zero, func(a, b T) T {
+		return a + b
+	})
 }
