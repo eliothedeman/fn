@@ -1,8 +1,6 @@
 package fn
 
-import (
-	"constraints"
-)
+import "golang.org/x/exp/constraints"
 
 type Option[T any] struct {
 	val    T
