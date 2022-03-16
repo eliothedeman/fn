@@ -96,6 +96,18 @@ func IterSlice[T any](s []T) *Iter[T] {
 	})
 }
 
+func IterSlicePtr[T any](s []T) *Iter[*T] {
+	i := 0
+	return NewIter(func() (out Option[*T]) {
+		if i >= len(s) {
+			return None[*T]()
+		}
+		out = Some(&s[i])
+		i++
+		return
+	})
+}
+
 func Chain[T any](iters ...*Iter[T]) *Iter[T] {
 	i := 0
 	return NewIter(func() (out Option[T]) {
