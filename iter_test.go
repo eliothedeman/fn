@@ -252,15 +252,15 @@ func TestSumFloat(t *testing.T) {
 
 func TestOk(t *testing.T) {
 	r := Ok(42)
-	check.Eq(r.IsOk(), true)
-	val, err := r.Unpack()
+	check.Eq(HasValue(r), true)
+	val, err := Unpack(r)
 	check.Eq(val, 42)
 	check.Nil(err)
 }
 
 func TestErr(t *testing.T) {
 	r := Err[int](fs.ErrNotExist)
-	val, err := r.Unpack()
+	val, err := Unpack(r)
 	check.Eq(val, 0)
 	check.NotNil(err)
 	check.ErrIs(err, fs.ErrNotExist)
@@ -268,84 +268,114 @@ func TestErr(t *testing.T) {
 
 func TestTry(t *testing.T) {
 	r := Try(10, nil)
-	check.Eq(r.IsOk(), true)
-	val, err := r.Unpack()
+	check.Eq(HasValue(r), true)
+	val, err := Unpack(r)
 	check.Eq(val, 10)
 	check.Nil(err)
 }
 
 func TestTryWithError(t *testing.T) {
 	r := Try(0, fs.ErrPermission)
-	val, err := r.Unpack()
+	val, err := Unpack(r)
 	check.Eq(val, 0)
 	check.NotNil(err)
 	check.ErrIs(err, fs.ErrPermission)
 }
 
 func TestResultUnpack(t *testing.T) {
-	val, err := Ok("hello").Unpack()
+	val, err := Unpack(Ok("hello"))
 	check.Eq(val, "hello")
 	check.Nil(err)
 
-	val2, err2 := Err[string](fs.ErrClosed).Unpack()
+	val2, err2 := Unpack(Err[string](fs.ErrClosed))
 	check.Eq(val2, "")
 	check.NotNil(err2)
 }
 
 func TestResultIterOk(t *testing.T) {
-	vals := slices.Collect(Ok(99).Iter())
+	vals := slices.Collect(Iter(Ok(99)))
 	check.Eq(len(vals), 1)
 	check.Eq(vals[0], 99)
 }
 
 func TestResultIterErr(t *testing.T) {
-	vals := slices.Collect(Err[int](fs.ErrNotExist).Iter())
+	vals := slices.Collect(Iter(Err[int](fs.ErrNotExist)))
 	check.Eq(len(vals), 0)
 }
 
 func TestResultIterErrMethod(t *testing.T) {
 	r := Err[int](fs.ErrNotExist)
-	errs := slices.Collect(r.IterErr())
+	errs := slices.Collect(IterErr(r))
 	check.Eq(len(errs), 1)
 	check.ErrIs(errs[0], fs.ErrNotExist)
 }
 
 func TestResultIterErrOnOk(t *testing.T) {
 	r := Ok(10)
-	errs := slices.Collect(r.IterErr())
+	errs := slices.Collect(IterErr(r))
 	check.Eq(len(errs), 0)
 }
 
-func TestResultIsOk(t *testing.T) {
-	check.Eq(Ok(1).IsOk(), true)
-	check.Eq(Err[int](errors.New("fail")).IsOk(), false)
+func TestResultUnwrap(t *testing.T) {
+	check.Eq(Unwrap(Ok(42)), 42)
 }
 
-func TestResultIsErr(t *testing.T) {
-	check.Eq(Err[int](errors.New("fail")).IsErr(), true)
-	check.Eq(Ok(1).IsErr(), false)
+func TestResultUnwrapPanicsOnErr(t *testing.T) {
+	check.Panics(func() {
+		Unwrap(Err[int](errors.New("fail")))
+	})
+}
+
+func TestResultUnwrapOr(t *testing.T) {
+	check.Eq(UnwrapOr(Ok(10), 99), 10)
+	check.Eq(UnwrapOr(Err[int](errors.New("fail")), 99), 99)
+}
+
+func TestResultUnwrapOrF(t *testing.T) {
+	called := false
+	val := UnwrapOrF(Ok(10), func() int {
+		called = true
+		return 99
+	})
+	check.Eq(val, 10)
+	check.Eq(called, false)
+
+	val2 := UnwrapOrF(Err[int](errors.New("fail")), func() int {
+		return 99
+	})
+	check.Eq(val2, 99)
+}
+
+func TestResultHasValue(t *testing.T) {
+	check.Eq(HasValue(Ok(1)), true)
+	check.Eq(HasValue(Err[int](errors.New("fail"))), false)
+}
+
+func TestResultIsEmpty(t *testing.T) {
+	check.Eq(IsEmpty(Err[int](errors.New("fail"))), true)
+	check.Eq(IsEmpty(Ok(1)), false)
 }
 
 func TestResultMapViaIter(t *testing.T) {
-	vals := slices.Collect(Map(Ok(5).Iter(), func(i int) int {
+	vals := slices.Collect(Map(Iter(Ok(5)), func(i int) int {
 		return i * 10
 	}))
 	check.Eq(len(vals), 1)
 	check.Eq(vals[0], 50)
 
-	vals2 := slices.Collect(Map(Err[int](fs.ErrNotExist).Iter(), func(i int) int {
+	vals2 := slices.Collect(Map(Iter(Err[int](fs.ErrNotExist)), func(i int) int {
 		return i * 10
 	}))
 	check.Eq(len(vals2), 0)
 }
 
 func TestResultSumViaIter(t *testing.T) {
-	check.Eq(Sum(Ok(42).Iter()), 42)
-	check.Eq(Sum(Err[int](fs.ErrNotExist).Iter()), 0)
+	check.Eq(Sum(Iter(Ok(42))), 42)
+	check.Eq(Sum(Iter(Err[int](fs.ErrNotExist))), 0)
 }
 
 func TestResultChainIters(t *testing.T) {
-	sum := Sum(Chain(Ok(10).Iter(), Ok(20).Iter(), Err[int](fs.ErrNotExist).Iter(), Ok(30).Iter()))
+	sum := Sum(Chain(Iter(Ok(10)), Iter(Ok(20)), Iter(Err[int](fs.ErrNotExist)), Iter(Ok(30))))
 	check.Eq(sum, 60)
 }
 
@@ -353,69 +383,61 @@ func TestResultChainIters(t *testing.T) {
 
 func TestSome(t *testing.T) {
 	o := Some(42)
-	check.Eq(o.IsSome(), true)
-	check.Eq(o.Some(), 42)
+	check.Eq(HasValue(o), true)
+	check.Eq(Unwrap(o), 42)
 }
 
 func TestNone(t *testing.T) {
 	o := None[int]()
-	check.Eq(o.IsSome(), false)
+	check.Eq(HasValue(o), false)
+	check.Eq(IsEmpty(o), true)
 }
 
-func TestOptionSomePanicsOnNone(t *testing.T) {
+func TestOptionUnwrapPanicsOnNone(t *testing.T) {
 	check.Panics(func() {
-		n := None[int]()
-		n.Some()
+		Unwrap(None[int]())
 	})
 }
 
 func TestOptionUnwrapOr(t *testing.T) {
-	s := Some(10)
-	check.Eq(s.UnwrapOr(99), 10)
-	n := None[int]()
-	check.Eq(n.UnwrapOr(99), 99)
+	check.Eq(UnwrapOr(Some(10), 99), 10)
+	check.Eq(UnwrapOr(None[int](), 99), 99)
 }
 
 func TestOptionUnwrapOrF(t *testing.T) {
 	called := false
-	s := Some(10)
-	val := s.UnwrapOrF(func() int {
+	val := UnwrapOrF(Some(10), func() int {
 		called = true
 		return 99
 	})
 	check.Eq(val, 10)
 	check.Eq(called, false)
 
-	n := None[int]()
-	val2 := n.UnwrapOrF(func() int {
+	val2 := UnwrapOrF(None[int](), func() int {
 		return 99
 	})
 	check.Eq(val2, 99)
 }
 
 func TestOptionIter(t *testing.T) {
-	s := Some(7)
-	vals := slices.Collect(s.Iter())
+	vals := slices.Collect(Iter(Some(7)))
 	check.Eq(len(vals), 1)
 	check.Eq(vals[0], 7)
 }
 
 func TestOptionIterNone(t *testing.T) {
-	n := None[int]()
-	vals := slices.Collect(n.Iter())
+	vals := slices.Collect(Iter(None[int]()))
 	check.Eq(len(vals), 0)
 }
 
 func TestOptionIterString(t *testing.T) {
-	s := Some("hello")
-	vals := slices.Collect(s.Iter())
+	vals := slices.Collect(Iter(Some("hello")))
 	check.Eq(len(vals), 1)
 	check.Eq(vals[0], "hello")
 }
 
 func TestOptionMapViaIter(t *testing.T) {
-	s := Some(5)
-	vals := slices.Collect(Map(s.Iter(), func(i int) int {
+	vals := slices.Collect(Map(Iter(Some(5)), func(i int) int {
 		return i * 3
 	}))
 	check.Eq(len(vals), 1)
@@ -423,25 +445,18 @@ func TestOptionMapViaIter(t *testing.T) {
 }
 
 func TestOptionSumViaIter(t *testing.T) {
-	s := Some(42)
-	check.Eq(Sum(s.Iter()), 42)
-	n := None[int]()
-	check.Eq(Sum(n.Iter()), 0)
+	check.Eq(Sum(Iter(Some(42))), 42)
+	check.Eq(Sum(Iter(None[int]())), 0)
 }
 
 func TestOptionChainIters(t *testing.T) {
-	s1 := Some(1)
-	n := None[int]()
-	s2 := Some(2)
-	sum := Sum(Chain(s1.Iter(), n.Iter(), s2.Iter()))
+	sum := Sum(Chain(Iter(Some(1)), Iter(None[int]()), Iter(Some(2))))
 	check.Eq(sum, 3)
 }
 
 func TestOptionUnwrapOrZeroValue(t *testing.T) {
-	ns := None[string]()
-	check.Eq(ns.UnwrapOr(""), "")
-	ni := None[int]()
-	check.Eq(ni.UnwrapOr(0), 0)
+	check.Eq(UnwrapOr(None[string](), ""), "")
+	check.Eq(UnwrapOr(None[int](), 0), 0)
 }
 
 // --- Composition ---
@@ -483,7 +498,6 @@ func TestMapChain(t *testing.T) {
 
 func TestResultOptionInterop(t *testing.T) {
 	// Chain a Result iter with an Option iter
-	s := Some(20)
-	sum := Sum(Chain(Ok(10).Iter(), s.Iter()))
+	sum := Sum(Chain(Iter(Ok(10)), Iter(Some(20))))
 	check.Eq(sum, 30)
 }

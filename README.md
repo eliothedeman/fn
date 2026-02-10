@@ -1,6 +1,9 @@
 # fn
 
-A Go package providing functional programming utilities built on Go's `iter.Seq` iterators.
+A Go package providing functional programming utilities built on Go's `iter.Seq` iterators. Uses a lisp-style free function API.
+
+[![Go](https://github.com/eliothedeman/fn/actions/workflows/go.yml/badge.svg?branch=main)](https://github.com/eliothedeman/fn/actions/workflows/go.yml)
+[![GoDoc](https://pkg.go.dev/badge/github.com/eliothedeman/fn.svg)](https://pkg.go.dev/github.com/eliothedeman/fn)
 
 ## Requirements
 
@@ -24,6 +27,17 @@ go get github.com/eliothedeman/fn
 - **`Reduce(iter, seed, f)`** — folds an iterator into a single value
 - **`Sum(iter)`** — sums all numeric values in an iterator
 
+### Shared interfaces
+
+Both `Result[T]` and `Option[T]` satisfy `Iterable[T]` and work with the same set of unwrap functions:
+
+- **`Iter(x)`** — returns the iterator from any `Iterable[T]`
+- **`HasValue(x)`** — returns true if the container holds a value
+- **`IsEmpty(x)`** — returns true if the container is empty (Err or None)
+- **`Unwrap(x)`** — returns the value or panics if empty/error
+- **`UnwrapOr(x, def)`** — returns the value or a default
+- **`UnwrapOrF(x, f)`** — returns the value or calls a function to produce a default
+
 ### Result
 
 A generic `Result[T]` type for representing a value-or-error.
@@ -31,10 +45,8 @@ A generic `Result[T]` type for representing a value-or-error.
 - **`Ok(val)`** — creates a successful result
 - **`Err[T](err)`** — creates an error result
 - **`Try(val, err)`** — creates a result from a `(T, error)` pair, common with Go APIs
-- **`result.Unpack()`** — returns the `(T, error)` pair
-- **`result.IsOk()`** / **`result.IsErr()`** — check the result state
-- **`result.Iter()`** — yields the value if Ok, nothing if Err
-- **`result.IterErr()`** — yields the error if Err, nothing if Ok
+- **`Unpack(r)`** — returns the `(T, error)` pair
+- **`IterErr(r)`** — yields the error if Err, nothing if Ok
 
 ### Option
 
@@ -42,11 +54,6 @@ A generic `Option[T]` type for representing an optional value.
 
 - **`Some(val)`** — creates an Option containing a value
 - **`None[T]()`** — creates an empty Option
-- **`option.IsSome()`** — returns true if the Option contains a value
-- **`option.Some()`** — returns the value or panics if empty
-- **`option.UnwrapOr(def)`** — returns the value or a default
-- **`option.UnwrapOrF(f)`** — returns the value or calls a function to produce a default
-- **`option.Iter()`** — yields the value if Some, nothing if None
 
 ## Usage
 
@@ -75,13 +82,13 @@ func main() {
 
 	// Result type
 	r := fn.Ok(42)
-	val, err := r.Unpack()
+	val, err := fn.Unpack(r)
 	fmt.Println(val, err) // 42 <nil>
 
 	// Option type
 	o := fn.Some("hello")
-	fmt.Println(o.UnwrapOr("default")) // hello
-	fmt.Println(fn.None[string]().UnwrapOr("default")) // default
+	fmt.Println(fn.UnwrapOr(o, "default")) // hello
+	fmt.Println(fn.UnwrapOr(fn.None[string](), "default")) // default
 }
 ```
 
