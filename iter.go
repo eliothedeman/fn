@@ -40,7 +40,7 @@ func (r Result[T]) IsOk() bool {
 }
 
 func (r Result[T]) IsErr() bool {
-	return r.err == nil
+	return r.err != nil
 }
 
 func (r *Result[T]) IterErr() iter.Seq[error] {

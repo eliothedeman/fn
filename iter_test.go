@@ -321,6 +321,11 @@ func TestResultIsOk(t *testing.T) {
 	check.Eq(Err[int](errors.New("fail")).IsOk(), false)
 }
 
+func TestResultIsErr(t *testing.T) {
+	check.Eq(Err[int](errors.New("fail")).IsErr(), true)
+	check.Eq(Ok(1).IsErr(), false)
+}
+
 func TestResultMapViaIter(t *testing.T) {
 	vals := slices.Collect(Map(Ok(5).Iter(), func(i int) int {
 		return i * 10
