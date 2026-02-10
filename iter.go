@@ -35,6 +35,14 @@ func (r Result[T]) Iter() iter.Seq[T] {
 	}
 }
 
+func (r Result[T]) IsOk() bool {
+	return r.err == nil
+}
+
+func (r Result[T]) IsErr() bool {
+	return r.err == nil
+}
+
 func (r *Result[T]) IterErr() iter.Seq[error] {
 	return func(yield func(error) bool) {
 		if r.err != nil {
@@ -63,15 +71,22 @@ func (o *Option[T]) Some() T {
 	return o.val
 }
 
-func (o *Option[T]) HasSome() bool {
+func (o *Option[T]) IsSome() bool {
 	return o.hasSome
 }
 
-func (o *Option[T]) SomeOr(def T) T {
+func (o *Option[T]) UnwrapOr(def T) T {
 	if o.hasSome {
 		return o.val
 	}
 	return def
+}
+
+func (o *Option[T]) UnwrapOrF(def func() T) T {
+	if o.hasSome {
+		return o.val
+	}
+	return def()
 }
 
 func Some[T any](val T) Option[T] {
