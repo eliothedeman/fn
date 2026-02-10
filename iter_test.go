@@ -5,9 +5,9 @@ import "testing"
 func TestRange(t *testing.T) {
 	r := Range(0, 100)
 	i := 0
-	for r.Next() {
-		if i != r.Val() {
-			t.Errorf("have %d want %d", r.Val(), i)
+	for v := range r {
+		if i != v {
+			t.Errorf("have %d want %d", v, i)
 		}
 		i++
 	}
