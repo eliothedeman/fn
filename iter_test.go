@@ -1,6 +1,11 @@
 package fn
 
-import "testing"
+import (
+	"io/fs"
+	"testing"
+
+	"github.com/eliothedeman/check"
+)
 
 func TestRange(t *testing.T) {
 	r := Range(0, 100)
@@ -23,4 +28,13 @@ func TestChain(t *testing.T) {
 	if sum != 36 {
 		t.Error(sum)
 	}
+}
+
+func TestResult(t *testing.T) {
+	check.Eq(Sum(Map(Ok(100).Iter(), func(i int) float32 {
+		return float32(i) + 20.1
+	})), 120.1)
+	check.Eq(Sum(Map(Err[int](fs.ErrNotExist).Iter(), func(i int) float32 {
+		return float32(i) + 20.1
+	})), 0)
 }

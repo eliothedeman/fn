@@ -11,13 +11,49 @@ type Result[T any] struct {
 	err error
 }
 
-func (r *Result[T]) Unpack() (T, error) {
+func Try[T any](t T, err error) Result[T] {
+	return Result[T]{val: t, err: err}
+}
+
+func Ok[T any](t T) Result[T] {
+	return Result[T]{val: t}
+}
+
+func Err[T any](err error) Result[T] {
+	return Result[T]{err: err}
+}
+
+func (r Result[T]) Unpack() (T, error) {
 	return r.val, r.err
+}
+
+func (r Result[T]) Iter() iter.Seq[T] {
+	return func(yield func(T) bool) {
+		if r.err == nil {
+			yield(r.val)
+		}
+	}
+}
+
+func (r *Result[T]) IterErr() iter.Seq[error] {
+	return func(yield func(error) bool) {
+		if r.err != nil {
+			yield(r.err)
+		}
+	}
 }
 
 type Option[T any] struct {
 	val     T
 	hasSome bool
+}
+
+func (o *Option[T]) Iter() iter.Seq[T] {
+	return func(yield func(T) bool) {
+		if o.hasSome {
+			yield(o.val)
+		}
+	}
 }
 
 func (o *Option[T]) Some() T {
