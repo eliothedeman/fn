@@ -8,6 +8,7 @@ package fn
 
 import (
 	"iter"
+	"slices"
 
 	"golang.org/x/exp/constraints"
 )
@@ -221,6 +222,24 @@ func Chain[T any](iters ...iter.Seq[T]) iter.Seq[T] {
 	}
 }
 
+// Zip two iterators together
+func Zip[T any, K any](a iter.Seq[T], b iter.Seq[K]) iter.Seq2[T, K] {
+	return func(yield func(T, K) bool) {
+		pa, stopa := iter.Pull(a)
+		pb, stopb := iter.Pull(b)
+		for {
+			ax, aok := pa()
+			bx, bok := pb()
+			if (!aok || !bok) || !yield(ax, bx) {
+				stopa()
+				stopb()
+				return
+			}
+		}
+	}
+
+}
+
 // Map transforms each element in an iterator by applying f, producing a new
 // iterator of the mapped type. The transformation is lazy—f is called only
 // as elements are consumed:
@@ -302,4 +321,23 @@ func StepRange[T constraints.Integer | constraints.Float](start, end, step T) it
 //	fn.Sum(fn.Filter(fn.Range(0, 20), func(i int) bool { return i%2 == 0 }))
 func Range[T constraints.Integer | constraints.Float](start, end T) iter.Seq[T] {
 	return StepRange(start, end, 1)
+}
+
+// Reverse an iterator such that it iterates back to front
+func Reverse[T any](i iter.Seq[T]) iter.Seq[T] {
+	s := slices.Collect(i)
+	slices.Reverse(s)
+	return slices.Values(s)
+}
+
+func Enumerate[T any](x iter.Seq[T]) iter.Seq2[int, T] {
+	return func(yield func(int, T) bool) {
+		i := 0
+		for y := range x {
+			if !yield(i, y) {
+				return
+			}
+			i++
+		}
+	}
 }

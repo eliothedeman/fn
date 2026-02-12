@@ -501,3 +501,15 @@ func TestResultOptionInterop(t *testing.T) {
 	sum := Sum(Chain(Iter(Ok(10)), Iter(Some(20))))
 	check.Eq(sum, 30)
 }
+
+func TestZip(t *testing.T) {
+	for a, b := range Zip(Range(0, 10), Range(0, 10)) {
+		check.Eq(a, b)
+	}
+	for a, b := range Zip(Range(0, 10), Range(0, 11)) {
+		check.Eq(a, b)
+	}
+	for a, b := range Zip(Range(0, 9), Range(0, 11)) {
+		check.Eq(a, b)
+	}
+}
