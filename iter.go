@@ -2,7 +2,7 @@
 // iterators. It uses a lisp-style free function API: container types like
 // [Result] and [Option] expose only an Iter method, while all inspection and
 // extraction is done through shared free functions like [Unwrap], [HasValue],
-// and [UnwrapOr]. Iterator combinators ([Map], [Filter], [Reduce], [Chain])
+// and [UnwrapOr]. Iterator combinators ([Apply], [Filter], [Reduce], [Chain])
 // compose freely with these container iterators to build data pipelines.
 package fn
 
@@ -15,7 +15,7 @@ import (
 
 // Iterable is the shared interface that connects container types to the
 // iterator combinator pipeline. Both [Result] and [Option] satisfy Iterable,
-// so they can be passed directly to [Iter] and from there into [Map], [Filter],
+// so they can be passed directly to [Iter] and from there into [Apply], [Filter],
 // [Chain], [Reduce], and any other function that accepts an iter.Seq.
 type Iterable[T any] interface {
 	Iter() iter.Seq[T]
@@ -23,7 +23,7 @@ type Iterable[T any] interface {
 
 // Iter extracts an iter.Seq from any [Iterable] container. This is the
 // bridge between value containers and the iterator pipeline—use it to feed
-// a [Result] or [Option] into combinators like [Map] or [Chain]:
+// a [Result] or [Option] into combinators like [Apply] or [Chain]:
 //
 //	sum := fn.Sum(fn.Chain(fn.Iter(fn.Ok(10)), fn.Iter(fn.Some(20))))
 func Iter[T any](x Iterable[T]) iter.Seq[T] {
@@ -237,16 +237,15 @@ func Zip[T any, K any](a iter.Seq[T], b iter.Seq[K]) iter.Seq2[T, K] {
 			}
 		}
 	}
-
 }
 
-// Map transforms each element in an iterator by applying f, producing a new
+// Apply transforms each element in an iterator by applying f, producing a new
 // iterator of the mapped type. The transformation is lazy—f is called only
 // as elements are consumed:
 //
-//	doubled := fn.Map(fn.Range(1, 4), func(i int) int { return i * 2 })
+//	doubled := fn.Apply(fn.Range(1, 4), func(i int) int { return i * 2 })
 //	// yields 2, 4, 6
-func Map[T, K any](in iter.Seq[T], f func(T) K) iter.Seq[K] {
+func Apply[T, K any](in iter.Seq[T], f func(T) K) iter.Seq[K] {
 	return func(yield func(K) bool) {
 		for i := range in {
 			if !yield(f(i)) {
@@ -257,7 +256,7 @@ func Map[T, K any](in iter.Seq[T], f func(T) K) iter.Seq[K] {
 }
 
 // Filter produces an iterator that yields only the elements for which pred
-// returns true. Like [Map], evaluation is lazy—pred is called as elements are
+// returns true. Like [Apply], evaluation is lazy—pred is called as elements are
 // consumed, and the pipeline short-circuits on early break:
 //
 //	evens := fn.Filter(fn.Range(0, 10), func(i int) bool { return i%2 == 0 })
