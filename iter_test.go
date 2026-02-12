@@ -116,10 +116,10 @@ func TestChainEarlyBreak(t *testing.T) {
 	check.Eq(count, 5)
 }
 
-// --- Map ---
+// --- Apply ---
 
-func TestMap(t *testing.T) {
-	doubled := slices.Collect(Map(Range(1, 4), func(i int) int {
+func TestApply(t *testing.T) {
+	doubled := slices.Collect(Apply(Range(1, 4), func(i int) int {
 		return i * 2
 	}))
 	check.Eq(len(doubled), 3)
@@ -128,8 +128,8 @@ func TestMap(t *testing.T) {
 	check.Eq(doubled[2], 6)
 }
 
-func TestMapTypeConversion(t *testing.T) {
-	strs := slices.Collect(Map(Range(0, 3), func(i int) string {
+func TestApplyTypeConversion(t *testing.T) {
+	strs := slices.Collect(Apply(Range(0, 3), func(i int) string {
 		return string(rune('a' + i))
 	}))
 	check.Eq(len(strs), 3)
@@ -138,16 +138,16 @@ func TestMapTypeConversion(t *testing.T) {
 	check.Eq(strs[2], "c")
 }
 
-func TestMapEmpty(t *testing.T) {
-	vals := slices.Collect(Map(Range(0, 0), func(i int) int {
+func TestApplyEmpty(t *testing.T) {
+	vals := slices.Collect(Apply(Range(0, 0), func(i int) int {
 		return i * 2
 	}))
 	check.Eq(len(vals), 0)
 }
 
-func TestMapEarlyBreak(t *testing.T) {
+func TestApplyEarlyBreak(t *testing.T) {
 	count := 0
-	for range Map(Range(0, 100), func(i int) int {
+	for range Apply(Range(0, 100), func(i int) int {
 		count++
 		return i
 	}) {
@@ -356,14 +356,14 @@ func TestResultIsEmpty(t *testing.T) {
 	check.Eq(IsEmpty(Ok(1)), false)
 }
 
-func TestResultMapViaIter(t *testing.T) {
-	vals := slices.Collect(Map(Iter(Ok(5)), func(i int) int {
+func TestResultApplyViaIter(t *testing.T) {
+	vals := slices.Collect(Apply(Iter(Ok(5)), func(i int) int {
 		return i * 10
 	}))
 	check.Eq(len(vals), 1)
 	check.Eq(vals[0], 50)
 
-	vals2 := slices.Collect(Map(Iter(Err[int](fs.ErrNotExist)), func(i int) int {
+	vals2 := slices.Collect(Apply(Iter(Err[int](fs.ErrNotExist)), func(i int) int {
 		return i * 10
 	}))
 	check.Eq(len(vals2), 0)
@@ -436,8 +436,8 @@ func TestOptionIterString(t *testing.T) {
 	check.Eq(vals[0], "hello")
 }
 
-func TestOptionMapViaIter(t *testing.T) {
-	vals := slices.Collect(Map(Iter(Some(5)), func(i int) int {
+func TestOptionApplyViaIter(t *testing.T) {
+	vals := slices.Collect(Apply(Iter(Some(5)), func(i int) int {
 		return i * 3
 	}))
 	check.Eq(len(vals), 1)
@@ -461,10 +461,10 @@ func TestOptionUnwrapOrZeroValue(t *testing.T) {
 
 // --- Composition ---
 
-func TestFilterMapReduceComposition(t *testing.T) {
+func TestFilterApplyReduceComposition(t *testing.T) {
 	// Sum of doubled even numbers from 0..10
 	result := Reduce(
-		Map(
+		Apply(
 			Filter(Range(0, 10), func(i int) bool { return i%2 == 0 }),
 			func(i int) int { return i * 2 },
 		),
@@ -483,9 +483,9 @@ func TestChainFilterSum(t *testing.T) {
 	check.Eq(sum, 42)
 }
 
-func TestMapChain(t *testing.T) {
-	a := Map(Range(0, 3), func(i int) int { return i * 10 })
-	b := Map(Range(0, 3), func(i int) int { return i * 100 })
+func TestApplyChain(t *testing.T) {
+	a := Apply(Range(0, 3), func(i int) int { return i * 10 })
+	b := Apply(Range(0, 3), func(i int) int { return i * 100 })
 	vals := slices.Collect(Chain(a, b))
 	check.Eq(len(vals), 6)
 	check.Eq(vals[0], 0)
