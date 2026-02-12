@@ -8,6 +8,7 @@ import (
 // Vec is a growable vector
 type Vec[T any] []T
 
+// Collect forwards to the slices.Collect function
 func Collect[T any](i iter.Seq[T]) Vec[T] {
 	return slices.Collect(i)
 }
